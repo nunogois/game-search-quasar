@@ -1,6 +1,10 @@
 <template>
   <q-card class="q-ma-md" style="height: 200px">
-    <q-card-section horizontal class="fit">
+    <q-card-section
+      horizontal
+      class="fit"
+      @click="$router.push(`/game/${game.id}`)"
+    >
       <q-card-section class="q-pa-none">
         <img
           :src="game.cover?.url.replace('t_thumb', 't_cover_big_2x')"
@@ -22,20 +26,38 @@
         }}</span>
         <q-rating
           v-model="totalRating"
+          v-if="totalRating > -1"
           readonly
           size="1.5em"
           :max="5"
           icon-half="star_half"
           color="primary"
         />
-        <span>{{ game.platforms?.map((p) => p.abbreviation).join(', ') }}</span>
+        <span>{{
+          game.platforms?.map((p) => p.abbreviation || p.name).join(', ')
+        }}</span>
+      </q-card-section>
+      <q-card-section style="flex: 1; text-align: right">
+        <q-btn
+          :icon="
+            favorites.filter((f) => f.id === game.id).length
+              ? 'favorite'
+              : 'favorite_border'
+          "
+          flat
+          color="red-9"
+          round
+          @click.stop="toggleFavorite(game)"
+        />
       </q-card-section>
     </q-card-section>
   </q-card>
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, computed } from 'vue'
+import { defineComponent, ref, PropType, computed } from 'vue'
+
+import { useQuasar } from 'quasar'
 
 import { Game } from './models'
 
@@ -47,13 +69,27 @@ export default defineComponent({
     }
   },
   setup(props) {
+    const $q = useQuasar()
+
     const totalRating = computed(() => {
       const { total_rating } = props.game
-      return (5 * total_rating) / 100
+      return total_rating ? (5 * total_rating) / 100 : -1
     })
 
+    const favorites = ref<Game[]>($q.localStorage.getItem('favorites') || [])
+
+    const toggleFavorite = (game: Game) => {
+      favorites.value = $q.localStorage.getItem('favorites') || []
+      if (favorites.value.filter((f) => f.id === game.id).length)
+        favorites.value = favorites.value.filter((f) => f.id !== game.id)
+      else favorites.value = [...favorites.value, game]
+      $q.localStorage.set('favorites', favorites.value)
+    }
+
     return {
-      totalRating
+      favorites,
+      totalRating,
+      toggleFavorite
     }
   }
 })

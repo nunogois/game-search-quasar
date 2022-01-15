@@ -25,6 +25,16 @@
           color="primary"
         />
       </div>
+      <div class="text-center q-mt-lg">
+        <q-btn
+          :label="isFavorite ? 'Remove as Favorite' : 'Add as Favorite'"
+          icon="favorite"
+          color="red"
+          :elevated="!isFavorite"
+          :outline="isFavorite"
+          @click="toggleFavorite(game)"
+        />
+      </div>
       <h5>Description</h5>
       <p>
         {{ game.summary }}
@@ -91,6 +101,7 @@
 import { QCarousel } from 'quasar'
 import { defineComponent, ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useQuasar } from 'quasar'
 
 import { api } from '../boot/axios'
 
@@ -98,11 +109,14 @@ import { Game, GameDetails } from '../components/models'
 
 export default defineComponent({
   setup() {
+    const $q = useQuasar()
+
     const game = ref<GameDetails>()
     const currentScreenshot = ref(0)
     const currentSimilarGame = ref(0)
     const fullscreen = ref(false)
     const screenshotCarousel = ref<QCarousel>()
+    const favorites = ref<Game[]>($q.localStorage.getItem('favorites') || [])
 
     const route = useRoute()
 
@@ -117,6 +131,13 @@ export default defineComponent({
         return (5 * total_rating) / 100
       }
       return -1
+    })
+
+    const isFavorite = computed(() => {
+      if (game.value) {
+        return favorites.value.filter((f) => f.id === game.value?.id).length > 0
+      }
+      return false
     })
 
     const info = computed(() => {
@@ -135,6 +156,15 @@ export default defineComponent({
       }
       return {}
     })
+
+    const toggleFavorite = (gameDetails?: GameDetails) => {
+      favorites.value = $q.localStorage.getItem('favorites') || []
+      const game = gameDetails as Game
+      if (game && favorites.value.filter((f) => f.id === game.id).length)
+        favorites.value = favorites.value.filter((f) => f.id !== game.id)
+      else favorites.value = [...favorites.value, game]
+      $q.localStorage.set('favorites', favorites.value)
+    }
 
     const loadGame = async () => {
       const response = await api.get(`/games?id=${route.params.id as string}`)
@@ -160,6 +190,8 @@ export default defineComponent({
       fullscreen,
       currentSimilarGame,
       screenshotCarousel,
+      isFavorite,
+      toggleFavorite,
       game
     }
   }

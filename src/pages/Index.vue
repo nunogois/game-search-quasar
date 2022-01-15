@@ -12,7 +12,6 @@
             :key="game.id"
             :game="game"
             class="cursor-pointer"
-            @click="$router.push(`/game/${game.id}`)"
           />
         </div>
         <div v-else class="fit flex items-center justify-center">
@@ -24,7 +23,9 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from 'vue'
+import { defineComponent, ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { useQuasar } from 'quasar'
 
 import { api } from '../boot/axios'
 
@@ -35,16 +36,27 @@ import GameCard from '../components/GameCard.vue'
 export default defineComponent({
   components: { Search, GameCard },
   setup() {
+    const $q = useQuasar()
+    const route = useRoute()
+
     const loading = ref(true)
     const games = ref<Game[]>([])
+
+    watch(route, async () => {
+      await loadGames()
+    })
 
     const loadGames = async (search = '') => {
       loading.value = true
 
-      search = search ? `?search=${search}` : ''
+      if (route.query.favorites) {
+        games.value = $q.localStorage.getItem('favorites') as Game[]
+      } else {
+        search = search ? `?search=${search}` : ''
 
-      const response = await api.get('/games' + search)
-      games.value = response.data as Game[]
+        const response = await api.get('/games' + search)
+        games.value = response.data as Game[]
+      }
       loading.value = false
     }
 
